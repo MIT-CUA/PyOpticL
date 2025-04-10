@@ -177,7 +177,429 @@ class example_component:
         part.Placement = obj.Placement
         obj.DrillPart = part
 
+class mirror_mount_m05:
+    '''
+    New Mirror mount: Newport m05
 
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        mirror (bool) : Whether to add a mirror component to the mount
+        thumbscrews (bool): Whether or not to add two HKTS 5-64 adjusters
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, thumbscrews=False):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyBool', 'ThumbScrews').ThumbScrews = thumbscrews
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+
+        obj.ViewObject.ShapeColor = mount_color
+        self.part_numbers = ['NEWPORT-M05']
+
+        if thumbscrews:
+            _add_linked_object(obj, "Upper Thumbscrew", thumbscrew_hkts_5_64, pos_offset=(-12.954, 9.14, 9.14))
+            _add_linked_object(obj, "Lower Thumbscrew", thumbscrew_hkts_5_64, pos_offset=(-12.954, -9.14, -9.14))
+
+    def execute(self, obj):
+        mesh = _import_stl("newport_m05.stl", (0, 0, 0), (0, 2.7840105, -18.6+21))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        part = _custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                x=-6.96, y=0, z=-layout.inch/2)
+
+        for i in [-3.4, -11.53]:
+            part = part.fuse(_custom_cylinder(dia=1.6, dz=2.2,
+                                              x=i, y=0, z=-layout.inch/2))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class miniTA:
+    '''
+    Butterfly laser shape to be placed on driver
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Part::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, side_len=15):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Side_Length').Side_Length = side_len
+
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = adapter_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        # Butterfly laser diode definition:
+        part = _custom_box(dx=15.3, dy=30, dz=9.4, x=0, y=16.35, z=-5.04732, fillet=0)
+        part = part.fuse(_custom_cylinder(dia=5.4, dz=3, x=0, y=1.35, z=0, dir=(0,-1,0)))
+        obj.Shape = part
+
+class eval_miniTA:
+    '''
+    Evaluation board for miniTA
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, height=0):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = mount_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+        # miniTA Laser Shape:
+        _add_linked_object(obj, "miniTA", miniTA, pos_offset=(0, 0, height), rot_offset=(0, 0, 90))
+
+    def execute(self, obj):
+        height = obj.Height.Value
+        # Driver mesh import:
+        mesh = _import_stl("EVAL_miniTA.stl", (0, -0, 0), (-9.507, -2.519, -56.51-1.5-1.04+height))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        # Drill Defintion for Bounding Box:
+        part = _custom_box(dy=75+10+2.5, dx=96.25+10, dz=25.4*2, y=6.792+5.8435-1.25, x=-34, z=-13.1+height, fillet=5)
+
+        # Drill Definition for Screw Holes:
+        part = part.fuse(_custom_cylinder(dia=2.7, dz=2*inch, x=9.12, y=15.75, z=-13.1+height))
+
+        part = part.fuse(_custom_cylinder(dia=2.7, dz=2*inch, x=9.12, y=-15.75, z=-13.1+height))
+
+        part = part.fuse(_custom_cylinder(dia=2.7, dz=2*inch, x=9.12-50, y=-15.75, z=-13.1+height))
+
+        part = part.fuse(_custom_cylinder(dia=2.7, dz=2*inch, x=9.12-50, y=15.75, z=-13.1+height))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class isolator_895:
+    '''
+    Isolator 895 On Mount
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, height=0, adapter_args=dict()):
+        adapter_args.setdefault("mount_hole_dy", 30)
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.part_numbers = ['IO-3D-850-VLP']
+        self.transmission = True
+        self.max_angle = 10
+        self.max_width = 5
+
+        _add_linked_object(obj, "surface_adapter", surface_adapter, pos_offset=(0, 0, height-16.8402), rot_offset=(0, 0, 0), **adapter_args)
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        height = obj.Height.Value
+        # Driver mesh import:
+        mesh = _import_stl("I8953D_Isolator.stl", (90, 0, 90), (0, 0, 0+height))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+class isolator_850:
+    '''
+    Isolator 850 On Mount
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, height=0, adapter_args=dict()):
+        adapter_args.setdefault("mount_hole_dy", 30)
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.part_numbers = ['IO-3D-850-VLP']
+        self.transmission = True
+        self.max_angle = 10
+        self.max_width = 5
+
+        _add_linked_object(obj, "surface_adapter", surface_adapter, pos_offset=(15.456, 0, height-17.145), rot_offset=(0, 0, 0), **adapter_args)
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        height = obj.Height.Value
+        # Driver mesh import:
+        mesh = _import_stl("IO-3D-850-VLP-Step.stl", (0, 0, 180), (0, 0, 0+height))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+class butterfly_laser:
+    '''
+    Butterfly laser shape to be placed on driver
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Part::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, side_len=15):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Side_Length').Side_Length = side_len
+
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = adapter_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        # Butterfly laser diode definition:
+        part = _custom_box(dx=15.3, dy=30, dz=9.4, x=0, y=16.35, z=-5.04732, fillet=0)
+        part = part.fuse(_custom_cylinder(dia=5.4, dz=3, x=0, y=1.35, z=0, dir=(0,-1,0)))
+        obj.Shape = part
+
+class butterfly_laser_on_koheron_driver:
+    '''
+    Butterfly laser on Koheron CTL200_V5 Driver
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, height=0):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = mount_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+        # Butterfly Laser Shape:
+        _add_linked_object(obj, "butterfly_laser", butterfly_laser, pos_offset=(0, 0, height), rot_offset=(0, 0, 90))
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        height = obj.Height.Value
+        # Driver mesh import:
+        mesh = _import_stl("koheron_CTL200_V5.stl", (0, -0, 0), (-71.85, 37.53, -5.035-1.5+height))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        # Drill Defintion for Bounding Box:
+        part = _custom_box(dx=80, dy=80, dz=15+12.7, 
+                           x=0-35, y=35-35, z=-12.7+height-0.347321, fillet=5)
+
+        # Drill Definition for Screw Holes:
+        z_offset = -12.7
+        length = 50
+        p1x =  -17.95
+        p1y = 0.025
+        p2x = p1x-50
+        p2y = -24.98
+        p3x = p2x
+        p3y = 25.02
+        # part 1
+        part = _custom_cylinder(dia=2.5, dz=length, x=p1x, y=p1y, z=z_offset+height)
+        part = part.fuse(_custom_cylinder(dia=5, dz=length-6, x=p1x, y=p1y, z=z_offset-6+height))
+        # part 2
+        part = part.fuse(_custom_cylinder(dia=2.5, dz=length, x=p2x, y=p2y, z=z_offset+height))
+        part = part.fuse(_custom_cylinder(dia=5, dz=length-6, x=p2x, y=p2y, z=z_offset-6+height))
+        # part 3
+        part = part.fuse(_custom_cylinder(dia=2.5, dz=length, x=p3x, y=p3y, z=z_offset+height))
+        part = part.fuse(_custom_cylinder(dia=5, dz=length-6, x=p3x, y=p3y, z=z_offset-6+height))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class cage_mount_adapter:
+    '''
+    Surface adapter for cage mount import.
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Part::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, side_len=15):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Side_Length').Side_Length = side_len
+
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = adapter_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+    # this defines the component body and drilling
+    def execute(self, obj): # z is simply dz+half of mount import height
+        top_of_plate_z = -(20.32+5/16*inch)
+        part = _custom_box(dx=0.75*inch, dy=1.8*inch, dz=5/16*inch,
+                           x=0, y=0, z=top_of_plate_z, fillet=5)
+        # Cutout box to allow sliding on rails:
+        part = part.cut(_custom_box(dx=0.35*inch, dy=1.8*inch, dz=1, 
+                                     x=-0.35*inch/2-0.635008, y=0, z=-20.32, dir=(0,0,-1)))
+        
+        # Cutouts for screws:
+        for i in [-1,1]:
+            part = part.cut(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=inch+1, 
+                                          x=-4.5, y=7*i, z=-20.32, dir=(0,0,-1)))
+            part = part.cut(_custom_cylinder(dia=bolt_8_32['head_dia'], dz=bolt_8_32['head_dz'], 
+                                          x=-4.5, y=7*i, z=-20.32, dir=(0,0,-1)))
+
+        obj.Shape = part
+        # Mounting hole cutouts:
+        part = _custom_cylinder(dia=bolt_8_32['tap_dia'], dz=inch+1, 
+                                          x=-4.5, y=7, z=top_of_plate_z, dir=(0,0,-1))
+        part = part.fuse(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=inch+1, 
+                                          x=-4.5, y=-7, z=top_of_plate_z, dir=(0,0,-1)))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class cage_mount_pair:
+    '''
+    Cage Mount Pair CP33 with baseplate adapter mounts
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython' # if importing from stl, this will be 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, spread=2.5*inch, height=0, tolerance=5):
+        # required for all object classes
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        # define any user-accessible properties here
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Spread').Spread = spread
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+        obj.addProperty('App::PropertyLength', 'Tolerance').Tolerance = tolerance
+        # additional parameters (ie color, constants, etc)
+        obj.ViewObject.ShapeColor = mount_color
+        self.mount_bolt = bolt_8_32
+        self.mount_dz = -obj.Baseplate.OpticsDz.Value
+
+        # Importing surface adapters:
+        # Leftmost adapter:
+        _add_linked_object(obj, "cage_mount_adapter", cage_mount_adapter, pos_offset=(0, -0.325*inch, height), rot_offset=(0, 0, 90))
+        # Rightmost adapter:
+        _add_linked_object(obj, "cage_mount_adapter", cage_mount_adapter, pos_offset=(0, -0.025*inch-spread, height), rot_offset=(0, 0, -90))
+
+    # this defines the component body and drilling
+    def execute(self, obj):
+        spread = obj.Spread.Value
+        height = obj.Height.Value
+        tolerance = obj.Tolerance.Value
+        # Showing multiple mesh types:
+        mesh_all = Mesh.Mesh()
+        mesh1 = _import_stl("CP33-Step.stl", (0, 0, 90), (0, 0, height)) # x originally -4.445
+        mesh_all.addMesh(mesh1)
+        mesh2 = _import_stl("CP33-Step.stl", (0, 0, 90), (0, -spread, height))
+        mesh_all.addMesh(mesh2)
+
+        mesh_all.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh_all
+
+        # Drill Definition (Including Surface Mount Adapters):
+        part = _custom_box(dx=1.8*inch+tolerance, dy=np.abs(spread-0.35*inch)+0.35*2*inch+tolerance, dz=16, 
+                           x=0, y=-0.5*(spread+0.35*inch), z=height-(20.32+5/16*inch), fillet=5)
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class modular1:
+    '''
+    Modular bracket for modular doublepass aom connections
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        z_offset (float) : How far down to offset the mount from the laser height (default flush)
+    '''
+    type = 'Mesh::FeaturePython'
+    defaultSpread = 52.2
+    def __init__(self, obj, drill=True, Spread=defaultSpread):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        
+        # Spread Parameter:
+        obj.addProperty('App::PropertyLength', 'Spread').Spread = Spread
+
+        obj.ViewObject.ShapeColor = mount_color
+
+    def execute(self, obj):
+        spread = obj.Spread.Value
+
+        bolt_depth = 6.5
+        head_dia_14_20 = 10
+        pocket_depth = bolt_depth+0.5*head_dia_14_20+2
+
+        # Rightmost modular component
+        part = _custom_box(dx=12+inch, dy=16, dz=pocket_depth+1,
+                           x=-(37.4/2+11-0.5), y=-(spread/2), z=-(12.7), dir=(0, 0,-1),
+                           fillet=5)
+        part = part.fuse(_custom_cylinder(dia=0.260*inch, dz=11, x=0, y=-(spread/2), z=-(12.7+14.5/2), dir=(-1,0,0)))
+
+        # Leftmost modular component
+        part = part.fuse(_custom_box(dx=12+inch, dy=16, dz=pocket_depth+1,
+                           x=-(37.4/2+11-0.5), y=(spread/2), z=-(12.7), dir=(0, 0,-1),
+                           fillet=5))
+        part = part.fuse(_custom_cylinder(dia=0.260*inch, dz=11, x=0, y=(spread/2), z=-(12.7+14.5/2), dir=(-1,0,0)))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
 
 class baseplate_mount:
     '''

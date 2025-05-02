@@ -177,6 +177,263 @@ class example_component:
         part.Placement = obj.Placement
         obj.DrillPart = part
 
+
+class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
+    '''
+    Isomet 1205C AOM on KM100PM Mount
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        diffraction_angle (float) : The diffraction angle (in degrees) of the AOM
+        forward_direction (integer) : The direction of diffraction on forward pass (1=right, -1=left)
+        backward_direction (integer) : The direction of diffraction on backward pass (1=right, -1=left)
+
+    Sub-Parts:
+        prism_mount_km100pm (mount_args)
+        mount_for_km100pm (adapter_args)
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict(), x_off=0, y_off=0, z_off=0):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyAngle', 'DiffractionAngle').DiffractionAngle = diffraction_angle
+        obj.addProperty('App::PropertyInteger', 'ForwardDirection').ForwardDirection = forward_direction
+        obj.addProperty('App::PropertyInteger', 'BackwardDirection').BackwardDirection = backward_direction
+        obj.addProperty('App::PropertyLength', 'x_off').x_off = x_off
+        obj.addProperty('App::PropertyLength', 'y_off').y_off = y_off
+        obj.addProperty('App::PropertyLength', 'z_off').z_off = z_off
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.part_numbers = ['ISOMET_1205C']
+        self.diffraction_angle = diffraction_angle
+        self.diffraction_dir = (forward_direction, backward_direction)
+        self.transmission = True
+        self.max_angle = 10
+        self.max_width = 5
+
+        # TODO fix these parts to remove arbitrary translations
+        _add_linked_object(obj, "Mount KM100PM", prism_mount_km100pm,
+                           pos_offset=(-15.25, -20.15, -17.50+5.06), **mount_args)
+        _add_linked_object(obj, "Adapter Bracket", modified_mount_for_km100pm,
+                           pos_offset=(-15.25, -20.15, -17.50+5.06), **adapter_args)
+
+    def execute(self, obj):
+        mesh = _import_stl("isomet_1205c.stl", (0, 0, 90), (0, 0, 0))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+
+class modified_mount_for_km100pm: # Work in progress mount for AOM
+    '''
+    Adapter for mounting isomet AOMs to km100pm kinematic mount (Low Profile)
+
+    Args:
+        mount_offset (float[3]) : The offset position of where the adapter mounts to the component
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        slot_length (float) : The length of the slots used for mounting to the km100pm
+        countersink (bool) : Whether to drill a countersink instead of a counterbore for the AOM mount holes
+        counter_depth (float) : The depth of the countersink/bores for the AOM mount holes
+        arm_thickness (float) : The thickness of the arm the mounts to the km100PM
+        arm_clearance (float) : The distance between the bottom of the adapter arm and the bottom of the km100pm
+        stage_thickness (float) : The thickness of the stage that mounts to the AOM
+        stage_length (float) : The length of the stage that mounts to the AOM
+    '''
+    type = 'Part::FeaturePython'
+    def __init__(self, obj, drill=True, slot_length=5, countersink=False, counter_depth=2, arm_thickness=8, arm_clearance=0, stage_thickness=3, stage_length=21):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyLength', 'SlotLength').SlotLength = slot_length
+        obj.addProperty('App::PropertyBool', 'Countersink').Countersink = countersink
+        obj.addProperty('App::PropertyLength', 'CounterDepth').CounterDepth = counter_depth
+        obj.addProperty('App::PropertyLength', 'ArmThickness').ArmThickness = arm_thickness
+        obj.addProperty('App::PropertyLength', 'ArmClearance').ArmClearance = arm_clearance
+        obj.addProperty('App::PropertyLength', 'StageThickness').StageThickness = stage_thickness
+        obj.addProperty('App::PropertyLength', 'StageLength').StageLength = stage_length
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+
+        obj.ViewObject.ShapeColor = adapter_color
+        obj.setEditorMode('Placement', 2)
+
+    def execute(self, obj):
+        dx = obj.ArmThickness.Value
+        dy = 47.5
+        stage_dx = obj.StageLength.Value
+        stage_dz = obj.StageThickness.Value
+        dz = 11.86 # Original 16.92 #####################
+        # Main Body (Attached to Mount)
+        part = _custom_box(dx=dx, dy=dy, dz=dz-obj.ArmClearance.Value,
+                           x=0, y=0, z=obj.ArmClearance.Value)
+        # Stage Body (Attached to AOM)
+        part = part.fuse(_custom_box(dx=stage_dx, dy=dy, dz=stage_dz,
+                                     x=0, y=0, z=dz, dir=(1, 0, -1)))
+        # Slot Cutouts
+        for ddy in [15.2, 38.1]:
+            part = part.cut(_custom_box(dx=dx, dy=obj.SlotLength.Value+bolt_4_40['clear_dia'], dz=bolt_4_40['clear_dia'],
+                                        x=dx/2, y=25.4-ddy, z=6.4,
+                                        fillet=bolt_4_40['clear_dia']/2, dir=(-1, 0, 0)))
+            part = part.cut(_custom_box(dx=dx/2, dy=obj.SlotLength.Value+bolt_4_40['head_dia'], dz=bolt_4_40['head_dia'],
+                                        x=dx/2, y=25.4-ddy, z=6.4,
+                                        fillet=bolt_4_40['head_dia']/2, dir=(-1, 0, 0)))
+        # AOM Mounting Holes
+        for ddy in [0, -11.42, -26.65, -38.07]:
+            part = part.cut(_custom_cylinder(dia=bolt_4_40['clear_dia'], dz=stage_dz, head_dia=bolt_4_40['head_dia'],
+                                        head_dz=obj.CounterDepth.Value, countersink=obj.Countersink,
+                                        x=11.25, y=18.9+ddy, z=dz-stage_dz, dir=(0,0,1)))
+        part.translate(App.Vector(dx/2, 25.4-15.2+obj.SlotLength.Value/2, -6.4))
+        part = part.fuse(part)
+        obj.Shape = part
+
+        part = _custom_box(dx=34.35, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+
+class isolator_895_high_power:
+    '''
+    Isolator 895 On Mount; Larger power range for TA usage
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, height=0, adapter_args=dict()):
+        adapter_args.setdefault("mount_hole_dy", 43)
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'Height').Height = height
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.part_numbers = ['IO-3D-850-VLP']
+        self.transmission = True
+        self.max_angle = 10
+        self.max_width = 5
+
+        _add_linked_object(obj, "surface_adapter", surface_adapter, pos_offset=(0, 0, height-16.8402-5.2578), rot_offset=(0, 0, 0), **adapter_args)
+
+    def execute(self, obj):
+        height = obj.Height.Value
+
+        mesh = _import_stl("IO-5-895-HP.stl", (0, 0, 0), (54.102, 0, 0+height))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        part = _custom_box(dx=110, dy=36, dz=12.7, x=0, y=0, z=-22.098, fillet=5)
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+
+class fiberport_12mm:
+    '''
+    12mm Fiberport Mount with Drill only in top face of mount
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+        port (int) : 0 if no port, 1 if long port, 2 if short port
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, adapter_args=dict(), port = 0):
+        adapter_args.setdefault("mount_hole_dy", 30)
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'port').port = port
+
+        obj.ViewObject.ShapeColor = mount_color
+
+    def execute(self, obj):
+        port = obj.port.Value
+        # Driver mesh import:
+        mesh = _import_stl("fiberport_12mm.stl", (90, 270, 0), (-34.05, -12.596, 14.896))
+
+        if port ==1:
+            port_mesh = _import_stl("fiberport_long.stl", (0, 0, 0), (37.2, 0, 0))
+            mesh.addMesh(port_mesh)
+        elif port == 2:
+            port_mesh = _import_stl("fiberport_short.stl", (0, 0, 0), (19.54, 0, 0))
+            mesh.addMesh(port_mesh)
+
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        part = _custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                x=-7.5, y=13.335, z=-layout.inch/2)
+
+        part = part.fuse(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                x=-7.5, y=13.335-26.67, z=-layout.inch/2))
+        # Dowel pin cutouts
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=-7.5, y=20.05, z=-10.2, dir=(0,0,-1)))
+
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=1, y=13.335, z=-10.2, dir=(0,0,-1)))
+
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=1, y=-13.335, z=-10.2, dir=(0,0,-1)))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class fiberport_12mm_sidemount:
+    '''
+    12mm Fiberport Mount with drill in top and side of baseplate
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        side_length (float) : The side length of the cube
+        port (int) : 0 if no port, 1 if long port, 2 if short port
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, adapter_args=dict(), port = 0):
+        adapter_args.setdefault("mount_hole_dy", 30)
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        obj.addProperty('App::PropertyLength', 'port').port = port
+
+        obj.ViewObject.ShapeColor = mount_color
+
+    def execute(self, obj):
+        port = obj.port.Value
+        # Driver mesh import:
+        mesh = _import_stl("fiberport_12mm_sidemount.stl", (0, 90, 90), (19.05, 26.8965, -0.0275))
+
+        if port ==1:
+            port_mesh = _import_stl("fiberport_long.stl", (0, 0, 0), (37.2, 0, 0))
+            mesh.addMesh(port_mesh)
+        elif port == 2:
+            port_mesh = _import_stl("fiberport_short.stl", (0, 0, 0), (19.54, 0, 0))
+            mesh.addMesh(port_mesh)
+
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
+        part = _custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                x=-2.54, y=13.335, z=-layout.inch/2)
+
+        part = part.fuse(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                x=-2.54, y=13.335-26.67, z=-layout.inch/2))
+        # Dowel pin cutouts
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=-7.5, y=20.05, z=-10.2, dir=(0,0,-1)))
+
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=1, y=13.335, z=-10.2, dir=(0,0,-1)))
+
+        part = part.fuse(_custom_cylinder(dia=2, dz=5, x=1, y=-13.335, z=-10.2, dir=(0,0,-1)))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+
 class mirror_mount_m05:
     '''
     New Mirror mount: Newport m05

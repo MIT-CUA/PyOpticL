@@ -178,6 +178,128 @@ class example_component:
         obj.DrillPart = part
 
 
+class km100pm_for_AOMO_3080_125: # Work in progress mount for AOM
+    '''
+    Adapter for mounting AOMO 3080-125 to km100pm kinematic mount (Low Profile)
+
+    Args:
+        mount_offset (float[3]) : The offset position of where the adapter mounts to the component
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        slot_length (float) : The length of the slots used for mounting to the km100pm
+        countersink (bool) : Whether to drill a countersink instead of a counterbore for the AOM mount holes
+        counter_depth (float) : The depth of the countersink/bores for the AOM mount holes
+        arm_thickness (float) : The thickness of the arm the mounts to the km100PM
+        arm_clearance (float) : The distance between the bottom of the adapter arm and the bottom of the km100pm
+        stage_thickness (float) : The thickness of the stage that mounts to the AOM
+        stage_length (float) : The length of the stage that mounts to the AOM
+    '''
+    type = 'Part::FeaturePython'
+    def __init__(self, obj, drill=True, slot_length=5, countersink=False, counter_depth=2, arm_thickness=8, arm_clearance=0, stage_thickness=3, stage_length=23):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyLength', 'SlotLength').SlotLength = slot_length
+        obj.addProperty('App::PropertyBool', 'Countersink').Countersink = countersink
+        obj.addProperty('App::PropertyLength', 'CounterDepth').CounterDepth = counter_depth
+        obj.addProperty('App::PropertyLength', 'ArmThickness').ArmThickness = arm_thickness
+        obj.addProperty('App::PropertyLength', 'ArmClearance').ArmClearance = arm_clearance
+        obj.addProperty('App::PropertyLength', 'StageThickness').StageThickness = stage_thickness
+        obj.addProperty('App::PropertyLength', 'StageLength').StageLength = stage_length
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+
+        obj.ViewObject.ShapeColor = adapter_color
+        obj.setEditorMode('Placement', 2)
+
+    def execute(self, obj):
+        dx = obj.ArmThickness.Value
+        dy = 55 # Original 47.5
+        stage_dx = obj.StageLength.Value
+        stage_dz = obj.StageThickness.Value
+        dz = 11.86 # Original 16.92 #####################
+        # Main Body (Attached to Mount)
+        part = _custom_box(dx=dx, dy=dy, dz=dz-obj.ArmClearance.Value,
+                           x=0, y=0, z=obj.ArmClearance.Value)
+        # Stage Body (Attached to AOM)
+        part = part.fuse(_custom_box(dx=stage_dx, dy=dy, dz=stage_dz,
+                                     x=0, y=0, z=dz, dir=(1, 0, -1)))
+        # Slot Cutouts
+        for ddy in [15.2, 38.1]:
+            part = part.cut(_custom_box(dx=dx, dy=obj.SlotLength.Value+bolt_4_40['clear_dia'], dz=bolt_4_40['clear_dia'],
+                                        x=dx/2, y=25.4-ddy, z=6.4,
+                                        fillet=bolt_4_40['clear_dia']/2, dir=(-1, 0, 0)))
+            part = part.cut(_custom_box(dx=dx/2, dy=obj.SlotLength.Value+bolt_4_40['head_dia'], dz=bolt_4_40['head_dia'],
+                                        x=dx/2, y=25.4-ddy, z=6.4,
+                                        fillet=bolt_4_40['head_dia']/2, dir=(-1, 0, 0)))
+        # AOM Mounting Holes
+        # for ddy in [0, -11.42, -26.65, -38.07]:
+        for ddy in [0.87*inch, -0.88*inch]:
+            part = part.cut(_custom_cylinder(dia=bolt_4_40['clear_dia'], dz=stage_dz, head_dia=bolt_4_40['head_dia'],
+                                        head_dz=obj.CounterDepth.Value, countersink=obj.Countersink,
+                                        x=11.25, y=ddy, z=dz-stage_dz, dir=(0,0,1)))
+        part.translate(App.Vector(dx/2, 25.4-15.2+obj.SlotLength.Value/2, -6.4))
+        part = part.fuse(part)
+        obj.Shape = part
+
+        part = _custom_box(dx=34.35+3, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+
+class AOMO_3080_125_on_km100pm: # Work in progress AOM
+    '''
+    AOMO 3080-125 on KM100PM Mount
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        diffraction_angle (float) : The diffraction angle (in degrees) of the AOM
+        forward_direction (integer) : The direction of diffraction on forward pass (1=right, -1=left)
+        backward_direction (integer) : The direction of diffraction on backward pass (1=right, -1=left)
+
+    Sub-Parts:
+        prism_mount_km100pm (mount_args)
+        mount_for_km100pm (adapter_args)
+    '''
+    type = 'Part::FeaturePython'
+    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict(), x_off=0, y_off=0, z_off=0):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyAngle', 'DiffractionAngle').DiffractionAngle = diffraction_angle
+        obj.addProperty('App::PropertyInteger', 'ForwardDirection').ForwardDirection = forward_direction
+        obj.addProperty('App::PropertyInteger', 'BackwardDirection').BackwardDirection = backward_direction
+        obj.addProperty('App::PropertyLength', 'x_off').x_off = x_off
+        obj.addProperty('App::PropertyLength', 'y_off').y_off = y_off
+        obj.addProperty('App::PropertyLength', 'z_off').z_off = z_off
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.diffraction_angle = diffraction_angle
+        self.diffraction_dir = (forward_direction, backward_direction)
+        self.transmission = True
+        self.max_angle = 10
+        self.max_width = 5
+
+        # TODO fix these parts to remove arbitrary translations
+        _add_linked_object(obj, "Mount KM100PM", prism_mount_km100pm,
+                           pos_offset=(-15.25, -20.15, -17.50+5.06), **mount_args)
+        _add_linked_object(obj, "Adapter Bracket", km100pm_for_AOMO_3080_125,
+                           pos_offset=(-15.25, -20.15, -17.50+5.06), **adapter_args)
+
+    def execute(self, obj):
+        x_off = 0
+        y_off = -0.3*inch-0.084 # 0.084 for difference between AOM measurements
+        z_off = -6.98
+
+        part = _custom_box(dx=inch, dy=2*inch, dz=0.53*inch, x=x_off, y=y_off, z=z_off, fillet=0) # Main Body
+        part = part.fuse(_custom_cylinder(dia=4.5, dz=5.5, x=7+x_off, y=y_off-inch, z=6.731+z_off, dir=(0,-1,0))) # SMA Snap Connector
+        part = part.cut(_custom_cylinder(dia=1.5, dz=1.5*inch, x=13+x_off, y=0.3*inch+y_off, z=0.275*inch+z_off, dir=(-1,0,0))) # Beam Path Hole
+
+        part = part.cut(_custom_cylinder(dia=bolt_4_40['tap_dia'], dz=5, x=x_off, y=0.88*inch+y_off, z=4+z_off, dir=(0,0,-1)))
+        part = part.cut(_custom_cylinder(dia=bolt_4_40['tap_dia'], dz=5, x=x_off, y=-0.87*inch+y_off, z=4+z_off, dir=(0,0,-1)))
+        obj.Shape = part
+
+
 class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
     '''
     Isomet 1205C AOM on KM100PM Mount

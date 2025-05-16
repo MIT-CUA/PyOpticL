@@ -95,12 +95,10 @@ fb_newx = 0
 fb_newy = base_dy - 60
 
 low_profile = True
-aom = optomech.isomet_1205c_on_km100pm
+aom = optomech.AOMO_3080_125_on_km100pm
 
 if low_profile:
     base_dz = 0.5*layout.inch
-    aom = optomech.isomet_1205c_on_km100pm_low_profile
-
 
 def doublepass(x=0, y=0, angle=0, mirror=optomech.mirror_mount_m05, x_split=False, thumbscrews=True):
 

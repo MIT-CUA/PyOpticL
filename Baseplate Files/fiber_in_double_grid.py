@@ -4,11 +4,12 @@ from new_input_fiberport_modular_doublepass import doublepass
 
 # All x and y position inputs are in inches, not millimeters
 # as defined in library
+shift_y = (144.75 - 118.8)/25.4
 x1, y1 = 3,3
-x2 = 5.75+3
-y2 = 30.95/25.4-0.25-39/25.4+3
-x3 = 5.75+3
-y3 = 5.75+30.95/25.4-39/25.4+3
+x2 = 5.+3
+y2 = 30.95/25.4-0.25-39/25.4+3 + shift_y
+x3 = 5.+3
+y3 = 5.75+30.95/25.4-39/25.4+3 + shift_y
 
 
 def ta_double_grid():

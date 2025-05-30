@@ -68,6 +68,10 @@ See our recent preprint for more details about our results using these laser sou
 6. **Read the [docs](https://github.com/UMassIonTrappers/PyOpticL/tree/main/docs) library documentation**
 
 
+## Installing local copy (to edit optomech.py modules)
+
+First, remove the GitHub-sourced addon (from _Edit>Preferences>Addons>Custom Repositories,_ and _Tools>Addon Manager_). Clone the repo to a folder where you will edit your files. Then, instead of installing PyOpticL from the Addon Manager in FreeCAD, dynamically link the local repo directory to the folder where addons are loaded from in PyOpticL. On MacOS, for example, this looks like `ln -s ~/path/to/local/PyOpticL ~/Library/"Application Support"/FreeCAD/Mod/PyOpticL`. Then reload FreeCAD, and it should now show up in the _Tools>Addon Manager_ addon list.
+
 ___
 
 

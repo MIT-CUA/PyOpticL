@@ -5,15 +5,17 @@ name = "Doublepass"
 date_time = datetime.now().strftime("%m/%d/%Y")
 label = name + " " +  date_time
 
-base_dx = 11*layout.inch + 2*layout.inch - 0.25*layout.inch
-base_dy = 5.75*layout.inch
+base_dx = 11*layout.inch
+base_dy = 5.0*layout.inch
 base_dz = 15/16*layout.inch
 gap = 0
 
-x_offset = 0.25
-y_offset = 0.8/25.4+39/25.4
+shift_y = 144.75 - 118.8
 
-mount_holes_temp = [(1,0), (11,0), (9,2)]
+x_offset = 0 # 0.25 - 0.75 + 0.75
+y_offset = 0.8/25.4+39/25.4 - shift_y/24.5
+
+mount_holes_temp = [(1,0), (1, 1), (1, 2), (5,0), (5,1), (5, 2), (7,3), (9,2), (9,3)]
 
 mount_holes = []
 for x,y in mount_holes_temp:
@@ -29,7 +31,7 @@ mount_hole_xoff = 13
 mount_hole_yoff = 92-3*d_inch
 
 x_tri = 24
-aom_axis = 38 # distance to second optical axis
+aom_axis = 115 # distance to second optical axis
 pbs_axis = aom_axis + 38
 aom_xpos = 223
 
@@ -44,9 +46,9 @@ fb_xpos = mIn1_xpos
 fb_ypos = base_dy
 
 # pbs and fiber out
-pbs_xpos = mIn3_xpos + 75
+pbs_xpos = mIn3_xpos + 80
 mOut1_xpos = pbs_xpos
-mOut1_ypos = pbs_axis + 47
+mOut1_ypos = pbs_axis + 10
 hwp_xpos = mOut1_xpos + 35
 hwp_ypos = mOut1_ypos
 mOut2_xpos = base_dx - module_output_offset-2*layout.inch
@@ -81,8 +83,8 @@ show_test_beams = False
 ap3_xpos = mIn3_xpos + 35
 ap3_ypos = pbs_axis
 
-hwp3_xpos = mIn2_xpos
-hwp3_ypos = mIn2_ypos - 30
+hwp3_xpos = mIn2_xpos - 20
+hwp3_ypos = mIn2_ypos
 
 pin2_xpos = hwp_xpos + 15
 
@@ -90,7 +92,9 @@ ap2_xpos = mCat_xpos + 35
 ap2_ypos = aom_axis
 
 fb_newx = 0
-fb_newy = base_dy - 60
+fb_newy = base_dy - 105
+
+pbs_y_offset = -38
 
 low_profile = True
 aom = optomech.isomet_1205c_on_km100pm
@@ -110,73 +114,87 @@ def doublepass(x=0, y=0, angle=0, mirror=optomech.mirror_mount_m05, x_split=Fals
     
     baseplate.place_element("fp_new_in", optomech.fiberport_12mm, x=fb_newx+15, 
                             y=fb_newy-4+39, angle=0, port=1)
-
-    baseplate.place_element_along_beam("mIn3", optomech.circular_mirror, beam, 
-                                       beam_index=0b1, distance=mIn2_xpos-mIn1_xpos+fb_xpos, 
+    # baseplate.place_element("mod_mount2", optomech.modular2, x=fb_newx, 
+    #                         y=fb_newy-4+39, angle=180)
+    # baseplate.place_element_along_beam("pin1", optomech.pinhole_ida12, beam, beam_index=0b1, distance=60, angle=0)
+    
+    baseplate.place_element_along_beam("hwp3", optomech.rotation_stage_rsp05, beam, beam_index=0b1, distance=pbs_xpos-50, angle=0)
+    baseplate.place_element_along_beam("mIn", optomech.circular_mirror, beam, beam_index=0b1, distance=50,
                                        angle=-135, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-    baseplate.place_element_along_beam("mIn4", optomech.circular_mirror, beam, 
-                                       beam_index=0b1, distance=fb_ypos-25-pbs_axis, 
-                                       angle=45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-    baseplate.place_element("ap3", optomech.mirror_mount_c05g, x=ap3_xpos-6, 
-                            y=ap3_ypos, angle=0)
-    baseplate.place_element("ap4", optomech.mirror_mount_c05g, x=ap3_xpos+99, 
-                            y=ap3_ypos, angle=0)
-    baseplate.place_element("hwp", optomech.rotation_stage_rsp05, x=hwp3_xpos, 
-                            y=hwp3_ypos, angle=90)
-    baseplate.place_element("pin1", optomech.pinhole_ida12, x=mIn2_xpos, 
-                            y=mIn2_ypos-15, angle=90)
-    baseplate.place_element("pbs", optomech.cube_splitter, x=pbs_xpos, y=pbs_axis, 
+    pbs = baseplate.place_element("pbs", optomech.cube_splitter, x=pbs_xpos, y=fb_newy-4+39+pbs_y_offset, 
                             angle=90, mount_type=optomech.skate_mount, invert=True)
-    baseplate.place_element("mBack", optomech.circular_mirror, x=mOut1_xpos, 
-                            y=fb_newy-4+39, angle=-45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-    baseplate.place_element("ap5", optomech.mirror_mount_c05g, x=pbs_xpos, 
-                            y=pbs_axis+27-6, angle=90)
-    baseplate.place_element("hwp", optomech.rotation_stage_rsp05, x=hwp_xpos, 
-                            y=fb_newy-4+39, angle=0)
-    baseplate.place_element("OpmOut", optomech.mirror_mount_c05g, x=hwp_xpos+37,
-                            y=fb_newy-4+39, angle=180)
 
+    baseplate.place_element("ap4", optomech.mirror_mount_c05g, x=fb_newx+60, y=fb_newy-4+39, angle=180)
+    baseplate.place_element("ap3", optomech.mirror_mount_c05g, x=pbs_xpos-70, y=fb_newy-4+39+pbs_y_offset, angle=180)
+
+    # baseplate.place_element_along_beam("mIn4", optomech.circular_mirror, beam, 
+    #                                    beam_index=0b1, distance=pbs_y_offset, 
+    #                                    angle=-45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    # baseplate.place_element("hwp", optomech.rotation_stage_rsp05, x=hwp3_xpos, 
+    #                         y=hwp3_ypos, angle=00)
+
+
+    # baseplate.place_element_along_beam("mBack", optomech.circular_mirror, beam, beam_index=0b11, distance=pbs_y_offset, angle=45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    # baseplate.place_element("ap5", optomech.mirror_mount_c05g, x=pbs_xpos, 
+    #                         y=pbs_axis+27-6, angle=90)
+
+    # baseplate.place_element("OpmOut", optomech.mirror_mount_c05g, x=hwp_xpos+37,
+    #                         y=fb_newy-4+39, angle=180)
+
+    # baseplate.place_element("pin2", optomech.pinhole_ida12, x=pin2_xpos, 
+    #                         y=fb_newy-4+39, angle=0)
+    # baseplate.place_element("rot2", optomech.rotation_stage_rsp05, x=qwp_xpos, 
+                            # y=aom_axis, angle=0)
+    
+    baseplate.place_element_along_beam("pccIn", optomech.circular_lens, beam, beam_index=0b11, distance=40, angle=0, focal_length=30, mount_type=optomech.lens_holder_l05g)
+    baseplate.place_element_along_beam("pccIn2", optomech.circular_lens, beam, beam_index=0b11, distance=60, angle=0, focal_length=30, mount_type=optomech.lens_holder_l05g)
+
+    baseplate.place_element_along_beam("m1", optomech.circular_mirror, beam, 
+                                beam_index=0b11, distance=26, angle=45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    baseplate.place_element_along_beam("m2", optomech.circular_mirror, beam, 
+                                beam_index=0b11, angle=-45, distance=pbs_y_offset+aom_axis, mount_type = mirror, mount_args=dict(thumbscrews=thumbscrews))
+
+
+    # if fiber:
+    #     baseplate.place_element("m1", optomech.circular_mirror, x=m1_xpos, 
+    #                             y=pbs_axis, angle=-135, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    #     baseplate.place_element("m2", optomech.circular_mirror, x=m1_xpos, 
+    #                             y=aom_axis, angle=45, mount_type = mirror, mount_args=dict(thumbscrews=thumbscrews))
+    
+    # if tele1: # telescope
+        
+    
+    baseplate.place_element_along_beam("aom", aom, beam, beam_index=0b11, distance=27, angle=180)
+    
+    # baseplate.place_element("ap2b", optomech.circular_lens, x=ap2_xpos-6, 
+    #                         y=ap2_ypos, angle=0, mount_type=optomech.mirror_mount_c05g, 
+    #                         focal_length=10000000)
+    # baseplate.place_element("ap2a", optomech.circular_lens, x=m1_xpos-5-6, 
+    #                         y=ap2_ypos, angle=0, mount_type=optomech.mirror_mount_c05g)
+    # baseplate.place_element("mod_mountL", optomech.modular1, x=fb_newx, 
+    #                         y=fb_newy-4+39, angle=180)
+    baseplate.place_element_along_beam("cage_mount_replacement", optomech.circular_lens, beam, beam_index=0b110, distance=97-5.3, angle=0, focal_length=1000000, mount_type=optomech.lens_holder_l05g, optional=True)
+    baseplate.place_element_along_beam("cage_mount_replacement", optomech.circular_lens, beam, beam_index=0b110, distance=5.3, angle=0, focal_length=100, mount_type=optomech.lens_holder_l05g)
+    baseplate.place_element_along_beam("cage_mount_replacement", optomech.circular_lens, beam, beam_index=0b110, distance=5.3, angle=0, focal_length=1000000, mount_type=optomech.lens_holder_l05g, optional=True)
+    baseplate.place_element_along_beam("pin3", optomech.pinhole_ida12, beam, beam_index=0b110, distance=90, angle=0)
+    baseplate.place_element_along_beam("mCat", optomech.circular_mirror, beam, beam_index=0b110, distance=100-90, 
+                            angle=180, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    baseplate.place_element_along_beam("qwp", optomech.rotation_stage_rsp05, beam, beam_index=0b110, distance=50, angle=0)
+
+    # baseplate.place_element("mOut1", optomech.circular_mirror, x=pbs_xpos, y=0, angle=0)
+
+    # baseplate.place_element_along_beam("qwp2", optomech.rotation_stage_rsp05, beam, beam_index=0b1100, distance=100, angle=0)
+    baseplate.place_element("pin2", optomech.pinhole_ida12, x=pbs_xpos - 27, y=fb_newy-4+39+pbs_y_offset, angle=180)
+
+    baseplate.place_element_along_beam("mOut1", optomech.circular_mirror, beam, 
+                                beam_index=0b11000, distance=58, angle=135, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
+    baseplate.place_element_along_beam("mOut2", optomech.circular_mirror, beam, 
+                                beam_index=0b11000, distance=18, angle=-45, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
     baseplate.place_element("fiber_out_new", optomech.fiberport_12mm, x=base_dx-15, 
-                            y=fb_newy-4+39, angle=180, port=1)
-
-    baseplate.place_element("mod_mountR", optomech.modular1, x=base_dx, 
-                            y=fb_newy-4+39, angle=0)
-    baseplate.place_element("pin2", optomech.pinhole_ida12, x=pin2_xpos, 
-                            y=fb_newy-4+39, angle=0)
-    baseplate.place_element("rot2", optomech.rotation_stage_rsp05, x=qwp_xpos, 
-                            y=aom_axis, angle=0)
-    baseplate.place_element("mCat", optomech.circular_mirror, x=mCat_xpos, 
-                            y=aom_axis, angle=0, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-    baseplate.place_element("pin3", optomech.pinhole_ida12, x=mCat_xpos+5, 
-                            y=aom_axis, angle=0)
-    if fiber:
-        baseplate.place_element("m1", optomech.circular_mirror, x=m1_xpos, 
-                                y=pbs_axis, angle=-135, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-        baseplate.place_element("m2", optomech.circular_mirror, x=m1_xpos, 
-                                y=aom_axis, angle=135, mount_type = mirror, mount_args=dict(thumbscrews=thumbscrews))
-    
-    if tele1: # telescope
-        baseplate.place_element("m1", optomech.circular_mirror, x=m1_xpos, 
-                                y=pbs_axis, angle=-135, mount_type=mirror, mount_args=dict(thumbscrews=thumbscrews))
-        baseplate.place_element("m2", optomech.circular_mirror, x=m1_xpos, 
-                                y=aom_axis, angle=135, mount_type = mirror, mount_args=dict(thumbscrews=thumbscrews))
-        baseplate.place_element("pccIn", optomech.lens_holder_l05g, x=pccIn_xpos, 
-                                y=pbs_axis, angle=0)
-        baseplate.place_element("pccIn2", optomech.lens_holder_l05g, x=pccIn_xpos-50,
-                                y=pbs_axis, angle=0)
-    
-    baseplate.place_element("ap2b", optomech.circular_lens, x=ap2_xpos-6, 
-                            y=ap2_ypos, angle=0, mount_type=optomech.mirror_mount_c05g, 
-                            focal_length=10000000)
-    baseplate.place_element("ap2a", optomech.circular_lens, x=m1_xpos-5-6, 
-                            y=ap2_ypos, angle=0, mount_type=optomech.mirror_mount_c05g)
-    baseplate.place_element("mod_mountL", optomech.modular1, x=fb_newx, 
-                            y=fb_newy-4+39, angle=180)
-    baseplate.place_element("aom", aom, x=aom_xpos, 
-                            y=aom_axis, angle=0)
-    baseplate.place_element("cage_mount_replacement", optomech.circular_lens, x=22+100, y=aom_axis, 
-                            angle=0, focal_length=100, mount_type=optomech.lens_holder_l05g)
-
+                            y=fb_newy-4+39+pbs_y_offset+20, angle=180, port=1)
+    # baseplate.place_element("mod_mountL", optomech.modular1, x=base_dx, 
+    #                         y=fb_newy-4+39+pbs_y_offset+20, angle=0)
+    baseplate.place_element("ap2", optomech.mirror_mount_c05g, x=base_dx-45, y=fb_newy-4+39+pbs_y_offset+20, angle=180)
 
 if __name__ == "__main__":
     doublepass()

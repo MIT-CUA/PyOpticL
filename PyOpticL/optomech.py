@@ -241,7 +241,7 @@ class modified_mount_for_km100pm: # Work in progress mount for AOM
         stage_length (float) : The length of the stage that mounts to the AOM
     '''
     type = 'Part::FeaturePython'
-    def __init__(self, obj, drill=True, slot_length=5, countersink=False, counter_depth=2, arm_thickness=8, arm_clearance=0, stage_thickness=3, stage_length=21):
+    def __init__(self, obj, drill=True, slot_length=5, countersink=False, counter_depth=2, arm_thickness=8, arm_clearance=0, stage_thickness=3, stage_length=25.4):
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
 
@@ -260,7 +260,7 @@ class modified_mount_for_km100pm: # Work in progress mount for AOM
 
     def execute(self, obj):
         dx = obj.ArmThickness.Value
-        dy = 47.5
+        dy = 2 * inch #47.5
         stage_dx = obj.StageLength.Value
         stage_dz = obj.StageThickness.Value
         dz = 11.86 # Original 16.92 #####################
@@ -287,7 +287,7 @@ class modified_mount_for_km100pm: # Work in progress mount for AOM
         part = part.fuse(part)
         obj.Shape = part
 
-        part = _custom_box(dx=34.35, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
+        part = _custom_box(dx=34.35*1.3, dy=1.2*58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
         part.Placement = obj.Placement
         obj.DrillPart = part
 
@@ -854,6 +854,44 @@ class modular1:
                            x=-(37.4/2+11-0.5), y=(spread/2), z=-(12.7), dir=(0, 0,-1),
                            fillet=5))
         part = part.fuse(_custom_cylinder(dia=0.260*inch, dz=11, x=0, y=(spread/2), z=-(12.7+14.5/2), dir=(-1,0,0)))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+class modular2:
+    '''
+    Modular bracket for modular doublepass aom connections
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        z_offset (float) : How far down to offset the mount from the laser height (default flush)
+    '''
+    type = 'Mesh::FeaturePython'
+    defaultSpread = 52.2
+    def __init__(self, obj, drill=True, Spread=defaultSpread):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+        
+        # Spread Parameter:
+        obj.addProperty('App::PropertyLength', 'Spread').Spread = Spread
+
+        obj.ViewObject.ShapeColor = mount_color
+
+    def execute(self, obj):
+        spread = obj.Spread.Value
+
+        bolt_depth = 6.5
+        head_dia_14_20 = 10
+        pocket_depth = bolt_depth+0.5*head_dia_14_20+2
+
+        # Rightmost modular component
+        part = _custom_cylinder(dia=0.228*inch, dz=11, x=0, y=-(spread/2), z=-(12.7+14.5/2), dir=(-1,0,0))
+
+        # Leftmost modular component
+        part = part.fuse(_custom_cylinder(dia=0.228*inch, dz=11, x=0, y=(spread/2), z=-(12.7+14.5/2), dir=(-1,0,0)))
 
         part.Placement = obj.Placement
         obj.DrillPart = part

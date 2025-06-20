@@ -178,6 +178,94 @@ class example_component:
         obj.DrillPart = part
 
 
+class surface_adapter_for_chromatic:
+    '''
+    Surface adapter for chromatic waveplate module
+
+    Args:
+        drill (bool) : Whether baseplate mounting for this part should be drilled
+        mount_hole_dy (float) : The spacing between the two mount holes of the adapter
+        adapter_height (float) : The height of the suface adapter
+        outer_thickness (float) : The thickness of the walls around the bolt holes
+        tolerance (float) : Space between adapter and baseplate cutout in millimeters
+    '''
+    type = 'Part::FeaturePython'
+    def __init__(self, obj, drill=True, mount_hole_dy=26, adapter_height=8, outer_thickness=2, tolerance=1):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('App::PropertyLength', 'MountHoleDistance').MountHoleDistance = mount_hole_dy
+        obj.addProperty('App::PropertyLength', 'AdapterHeight').AdapterHeight = adapter_height
+        obj.addProperty('App::PropertyLength', 'OuterThickness').OuterThickness = outer_thickness
+        obj.addProperty('App::PropertyLength', 'tolerance').tolerance = tolerance
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+
+        obj.ViewObject.ShapeColor = adapter_color
+        obj.setEditorMode('Placement', 2)
+        self.drill_tolerance = 1
+
+    def execute(self, obj):
+        dx = bolt_8_32['head_dia']+obj.OuterThickness.Value*2
+        dy = dx+obj.MountHoleDistance.Value
+        dz = obj.AdapterHeight.Value
+        fillet_tolerance = obj.tolerance.Value
+
+        part = _custom_box(dx=dx, dy=dy, dz=dz,
+                           x=0, y=0, z=0, dir=(0, 0, -1),
+                           fillet=5)
+        part = part.cut(_custom_cylinder(dia=3.18, dz=dz,
+                                        x=0, y=6.35, z=-dz, dir=(0,0,1)))
+        part = part.cut(_custom_cylinder(dia=3.18, dz=dz,
+                                        x=0, y=-6.35, z=-dz, dir=(0,0,1)))
+        part = part.cut(_custom_box(dx=14, dy=20, dz=0.33, x=0, y=0, z=0, dir=(0,0,-1), fillet=1))
+        for i in [-1, 1]:
+            part = part.cut(_custom_cylinder(dia=bolt_8_32['clear_dia'], dz=dz,
+                                             head_dia=bolt_8_32['head_dia'], head_dz=bolt_8_32['head_dz'],
+                                             x=0, y=i*obj.MountHoleDistance.Value/2, z=0))
+        obj.Shape = part
+        part = _custom_box(dx=dx+fillet_tolerance, dy=dy+fillet_tolerance, dz=dz+10, x=0, y=0, z=-dz, fillet=dx/2, dir=(0,0,1))
+        for i in [-1, 1]:
+            part = part.fuse(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
+                                              x=0, y=i*obj.MountHoleDistance.Value/2, z=0))
+
+        part.Placement = obj.Placement
+        obj.DrillPart = part
+
+
+
+class chromatic_rotation_stage:
+    '''
+    Rotation stage, model FBR-AH2
+
+    Args:
+        invert (bool) : Whether the mount should be offset 90 degrees from the component
+        mount_hole_dy (float) : The spacing between the two mount holes of it's adapter
+        wave_plate_part_num (string) : The Thorlabs part number of the wave plate being used
+
+    Sub-Parts:
+        surface_adapter (adapter_args)
+    '''
+    type = 'Mesh::FeaturePython'
+    def __init__(self, obj, drill=True, invert=False, adapter_args=dict()):
+        obj.Proxy = self
+        ViewProvider(obj.ViewObject)
+
+        obj.addProperty('App::PropertyBool', 'Invert').Invert = invert
+        obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
+        obj.addProperty('Part::PropertyPartShape', 'DrillPart')
+
+        obj.ViewObject.ShapeColor = misc_color
+        self.transmission = True
+
+        _add_linked_object(obj, "Surface Adapter", surface_adapter_for_chromatic, pos_offset=(-3.5674, 0, -13.97), rot_offset=(0, 0, 90*obj.Invert), **adapter_args)
+
+    def execute(self, obj):
+
+        mesh = _import_stl("FBR-AH2.stl", (0, 0, 0), (0, 0, 0))
+        mesh.Placement = obj.Mesh.Placement
+        obj.Mesh = mesh
+
 class km100pm_for_AOMO_3080_125: # Work in progress mount for AOM
     '''
     Adapter for mounting AOMO 3080-125 to km100pm kinematic mount (Low Profile)
@@ -213,10 +301,10 @@ class km100pm_for_AOMO_3080_125: # Work in progress mount for AOM
 
     def execute(self, obj):
         dx = obj.ArmThickness.Value
-        dy = 55 # Original 47.5
+        dy = 55
         stage_dx = obj.StageLength.Value
         stage_dz = obj.StageThickness.Value
-        dz = 11.86 # Original 16.92 #####################
+        dz = 11.86
         # Main Body (Attached to Mount)
         part = _custom_box(dx=dx, dy=dy, dz=dz-obj.ArmClearance.Value,
                            x=0, y=0, z=obj.ArmClearance.Value)
@@ -232,7 +320,6 @@ class km100pm_for_AOMO_3080_125: # Work in progress mount for AOM
                                         x=dx/2, y=25.4-ddy, z=6.4,
                                         fillet=bolt_4_40['head_dia']/2, dir=(-1, 0, 0)))
         # AOM Mounting Holes
-        # for ddy in [0, -11.42, -26.65, -38.07]:
         for ddy in [0.87*inch, -0.88*inch]:
             part = part.cut(_custom_cylinder(dia=bolt_4_40['clear_dia'], dz=stage_dz, head_dia=bolt_4_40['head_dia'],
                                         head_dz=obj.CounterDepth.Value, countersink=obj.Countersink,
@@ -241,14 +328,14 @@ class km100pm_for_AOMO_3080_125: # Work in progress mount for AOM
         part = part.fuse(part)
         obj.Shape = part
 
-        part = _custom_box(dx=34.35+3, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
+        part = _custom_box(dx=34.35+3, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) # Measurements made after placement
         part.Placement = obj.Placement
         obj.DrillPart = part
 
 
 class AOMO_3080_125_on_km100pm: # Work in progress AOM
     '''
-    AOMO 3080-125 on KM100PM Mount
+    AOMO 3080-125 on KM100PM Mount (Main AOM Used)
 
     Args:
         drill (bool) : Whether baseplate mounting for this part should be drilled
@@ -261,7 +348,7 @@ class AOMO_3080_125_on_km100pm: # Work in progress AOM
         mount_for_km100pm (adapter_args)
     '''
     type = 'Part::FeaturePython'
-    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict(), x_off=0, y_off=0, z_off=0):
+    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict()):
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
 
@@ -269,9 +356,6 @@ class AOMO_3080_125_on_km100pm: # Work in progress AOM
         obj.addProperty('App::PropertyAngle', 'DiffractionAngle').DiffractionAngle = diffraction_angle
         obj.addProperty('App::PropertyInteger', 'ForwardDirection').ForwardDirection = forward_direction
         obj.addProperty('App::PropertyInteger', 'BackwardDirection').BackwardDirection = backward_direction
-        obj.addProperty('App::PropertyLength', 'x_off').x_off = x_off
-        obj.addProperty('App::PropertyLength', 'y_off').y_off = y_off
-        obj.addProperty('App::PropertyLength', 'z_off').z_off = z_off
 
         obj.ViewObject.ShapeColor = misc_color
         self.diffraction_angle = diffraction_angle
@@ -315,7 +399,7 @@ class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
         mount_for_km100pm (adapter_args)
     '''
     type = 'Mesh::FeaturePython'
-    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict(), x_off=0, y_off=0, z_off=0):
+    def __init__(self, obj, drill=True, diffraction_angle=degrees(0.026), forward_direction=1, backward_direction=1, mount_args=dict(), adapter_args=dict()):
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
 
@@ -323,9 +407,6 @@ class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
         obj.addProperty('App::PropertyAngle', 'DiffractionAngle').DiffractionAngle = diffraction_angle
         obj.addProperty('App::PropertyInteger', 'ForwardDirection').ForwardDirection = forward_direction
         obj.addProperty('App::PropertyInteger', 'BackwardDirection').BackwardDirection = backward_direction
-        obj.addProperty('App::PropertyLength', 'x_off').x_off = x_off
-        obj.addProperty('App::PropertyLength', 'y_off').y_off = y_off
-        obj.addProperty('App::PropertyLength', 'z_off').z_off = z_off
 
         obj.ViewObject.ShapeColor = misc_color
         self.part_numbers = ['ISOMET_1205C']
@@ -335,7 +416,6 @@ class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
         self.max_angle = 10
         self.max_width = 5
 
-        # TODO fix these parts to remove arbitrary translations
         _add_linked_object(obj, "Mount KM100PM", prism_mount_km100pm,
                            pos_offset=(-15.25, -20.15, -17.50+5.06), **mount_args)
         _add_linked_object(obj, "Adapter Bracket", modified_mount_for_km100pm,
@@ -345,7 +425,6 @@ class isomet_1205c_on_km100pm_low_profile: # Work in progress AOM
         mesh = _import_stl("isomet_1205c.stl", (0, 0, 90), (0, 0, 0))
         mesh.Placement = obj.Mesh.Placement
         obj.Mesh = mesh
-
 
 class modified_mount_for_km100pm: # Work in progress mount for AOM
     '''
@@ -385,7 +464,7 @@ class modified_mount_for_km100pm: # Work in progress mount for AOM
         dy = 47.5
         stage_dx = obj.StageLength.Value
         stage_dz = obj.StageThickness.Value
-        dz = 11.86 # Original 16.92 #####################
+        dz = 11.86
         # Main Body (Attached to Mount)
         part = _custom_box(dx=dx, dy=dy, dz=dz-obj.ArmClearance.Value,
                            x=0, y=0, z=obj.ArmClearance.Value)
@@ -409,7 +488,7 @@ class modified_mount_for_km100pm: # Work in progress mount for AOM
         part = part.fuse(part)
         obj.Shape = part
 
-        part = _custom_box(dx=34.35, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5) ######################
+        part = _custom_box(dx=34.35, dy=58.436594, dz=19.171633, x=10.825, y=12.514664, z=-6.731633, fillet=5)
         part.Placement = obj.Placement
         obj.DrillPart = part
 
@@ -421,9 +500,11 @@ class isolator_895_high_power:
     Args:
         drill (bool) : Whether baseplate mounting for this part should be drilled
         side_length (float) : The side length of the cube
+        cage (bool) : Whether the isolator should be mounted using a side post cage system
+        or not (default set to False to indicate mounting directly to baseplate)
     '''
     type = 'Mesh::FeaturePython'
-    def __init__(self, obj, drill=True, height=0, adapter_args=dict()):
+    def __init__(self, obj, drill=True, height=0, adapter_args=dict(), cage=False):
         adapter_args.setdefault("mount_hole_dy", 43)
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
@@ -431,23 +512,47 @@ class isolator_895_high_power:
         obj.addProperty('App::PropertyBool', 'Drill').Drill = drill
         obj.addProperty('Part::PropertyPartShape', 'DrillPart')
         obj.addProperty('App::PropertyLength', 'Height').Height = height
+        obj.addProperty('App::PropertyBool', 'Cage').Cage = cage
 
         obj.ViewObject.ShapeColor = misc_color
-        self.part_numbers = ['IO-3D-850-VLP']
         self.transmission = True
         self.max_angle = 10
         self.max_width = 5
 
-        _add_linked_object(obj, "surface_adapter", surface_adapter, pos_offset=(0, 0, height-16.8402-5.2578), rot_offset=(0, 0, 0), **adapter_args)
+        if not cage:
+            _add_linked_object(obj, "surface_adapter", surface_adapter, pos_offset=(0, 0, height-16.8402-5.2578), rot_offset=(0, 0, 0), **adapter_args)
 
     def execute(self, obj):
         height = obj.Height.Value
 
-        mesh = _import_stl("IO-5-895-HP.stl", (0, 0, 0), (54.102, 0, 0+height))
-        mesh.Placement = obj.Mesh.Placement
-        obj.Mesh = mesh
+        if not obj.Cage:
+            mesh = _import_stl("IO-5-895-HP.stl", (0, 0, 0), (54.102, 0, 0+height))
+            mesh.Placement = obj.Mesh.Placement
+            obj.Mesh = mesh
 
-        part = _custom_box(dx=110, dy=36, dz=12.7, x=0, y=0, z=-22.098, fillet=5)
+            part = _custom_box(dx=110, dy=36, dz=12.7, x=0, y=0, z=-22.098, fillet=5)
+        
+        else:
+            mesh = _import_stl("IO-5-895-HP.stl", (90, 0, 0), (54.102, 0, 0+height))
+
+            post_1 = _import_stl("POST_TR1.stl", (180, 0, 0), (0, 43.15+4.348, height))
+            mesh.addMesh(post_1)
+
+            post_adapter = _import_stl("RA90.stl", (0, 0, 0), (-8, 30+4.348, height))
+            mesh.addMesh(post_adapter)
+
+            post_2 = _import_stl("POST_TR1_5.stl", (90, 0, 0), (-16, 30+4.348, -13.7+height))
+            mesh.addMesh(post_2)
+
+            mesh.Placement = obj.Mesh.Placement
+            obj.Mesh = mesh
+
+            part = _custom_box(dx=110, dy=40, dz=12.7, x=0, y=0, z=-17.8, fillet=5)
+
+            part = part.fuse(_custom_cylinder(dia=12.7, dz=1, x=-16, y=30+4.348, z=-12.7))
+
+            part = part.fuse(_custom_cylinder(dia=bolt_14_20['clear_dia'], dz=12.7, head_dia=bolt_14_20['head_dia'],
+                                          head_dz=bolt_14_20['head_dz'], x=-16, y=30+4.348, z=-25.4, dir=(0,0,1)))
 
         part.Placement = obj.Placement
         obj.DrillPart = part
@@ -1087,9 +1192,12 @@ class surface_adapter:
         mount_hole_dy (float) : The spacing between the two mount holes of the adapter
         adapter_height (float) : The height of the suface adapter
         outer_thickness (float) : The thickness of the walls around the bolt holes
+        adjust (bool) : Whether mounted part movement should be allowed
+        adjust_dist (float) : Amount mounted part may move in millimeters
+        tolerance : Space between surface adapter and baseplate cutout in millimeters
     '''
     type = 'Part::FeaturePython'
-    def __init__(self, obj, drill=True, mount_hole_dy=20, adapter_height=8, outer_thickness=2):
+    def __init__(self, obj, drill=True, mount_hole_dy=20, adapter_height=8, outer_thickness=2, adjust=False, adjust_dist=5, tolerance=1):
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
 
@@ -1097,6 +1205,11 @@ class surface_adapter:
         obj.addProperty('App::PropertyLength', 'MountHoleDistance').MountHoleDistance = mount_hole_dy
         obj.addProperty('App::PropertyLength', 'AdapterHeight').AdapterHeight = adapter_height
         obj.addProperty('App::PropertyLength', 'OuterThickness').OuterThickness = outer_thickness
+
+        obj.addProperty('App::PropertyBool', 'adjust').adjust = adjust
+        obj.addProperty('App::PropertyLength', 'adjust_dist').adjust_dist = adjust_dist
+        obj.addProperty('App::PropertyLength', 'tolerance').tolerance = tolerance
+
         obj.addProperty('Part::PropertyPartShape', 'DrillPart')
 
         obj.ViewObject.ShapeColor = adapter_color
@@ -1107,23 +1220,39 @@ class surface_adapter:
         dx = bolt_8_32['head_dia']+obj.OuterThickness.Value*2
         dy = dx+obj.MountHoleDistance.Value
         dz = obj.AdapterHeight.Value
+        fillet_tolerance = obj.tolerance.Value
+        adj_dist = 0
+        if obj.adjust:
+            adj_dist = obj.adjust_dist.Value
+            dy = dy + adj_dist
 
         part = _custom_box(dx=dx, dy=dy, dz=dz,
                            x=0, y=0, z=0, dir=(0, 0, -1),
                            fillet=5)
-        part = part.cut(_custom_cylinder(dia=bolt_8_32['clear_dia'], dz=dz,
+        
+        if obj.adjust:
+            part = part.cut(_custom_box(dx=bolt_8_32['clear_dia'], dy=bolt_8_32['clear_dia'] + adj_dist, dz=dz,
+                                         x=0, y=0, z=-dz, fillet=bolt_8_32['clear_dia']/2, dir=(0,0,1)))
+            part = part.cut(_custom_box(dx=bolt_8_32['head_dia'], dy=bolt_8_32['head_dia'] + adj_dist, dz=bolt_8_32['head_dz'],
+                                         x=0, y=0, z=-dz, fillet=bolt_8_32['head_dia']/2, dir=(0,0,1)))
+        
+        else:
+            part = part.cut(_custom_cylinder(dia=bolt_8_32['clear_dia'], dz=dz,
                                          head_dia=bolt_8_32['head_dia'], head_dz=bolt_8_32['head_dz'],
                                          x=0, y=0, z=-dz, dir=(0,0,1)))
+
         for i in [-1, 1]:
             part = part.cut(_custom_cylinder(dia=bolt_8_32['clear_dia'], dz=dz,
                                              head_dia=bolt_8_32['head_dia'], head_dz=bolt_8_32['head_dz'],
                                              x=0, y=i*obj.MountHoleDistance.Value/2, z=0))
         obj.Shape = part
 
-        part = _bounding_box(obj, self.drill_tolerance, 6)
+        part = _custom_box(dx=dx+fillet_tolerance, dy=dy+fillet_tolerance+adj_dist, dz=dz+10, x=0, y=0, z=-dz, fillet=dx/2, dir=(0,0,1))
+
         for i in [-1, 1]:
             part = part.fuse(_custom_cylinder(dia=bolt_8_32['tap_dia'], dz=drill_depth,
                                               x=0, y=i*obj.MountHoleDistance.Value/2, z=0))
+
         part.Placement = obj.Placement
         obj.DrillPart = part
 
@@ -1278,7 +1407,7 @@ class skate_mount:
         cube_tol (float) : The tolerance for size of the recess in the skate mount
     '''
     type = 'Part::FeaturePython'
-    def __init__(self, obj, drill=True, cube_dx=10, cube_dy=10, cube_dz=10, mount_hole_dy=20, cube_depth=1, outer_thickness=2, cube_tol=0.1, slots=False):
+    def __init__(self, obj, drill=True, cube_dx=10, cube_dy=10, cube_dz=10, mount_hole_dy=18, cube_depth=1, outer_thickness=2, cube_tol=0.1, slots=False):
         obj.Proxy = self
         ViewProvider(obj.ViewObject)
 

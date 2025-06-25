@@ -927,8 +927,8 @@ class butterfly_laser_on_koheron_driver:
         p3x = p2x
         p3y = 25.02
         # part 1
-        part = _custom_cylinder(dia=3, dz=length, x=p1x, y=p1y, z=z_offset+height)
-        part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p1x, y=p1y, z=z_offset-6+height))
+        part = _custom_cylinder(dia=10, dz=length, x=p1x, y=p1y, z=z_offset+height)
+        part = part.fuse(_custom_cylinder(dia=20, dz=length-6, x=p1x, y=p1y, z=z_offset-6+height))
         # part 2
         part = part.fuse(_custom_cylinder(dia=3, dz=length, x=p2x, y=p2y, z=z_offset+height))
         part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p2x, y=p2y, z=z_offset-6+height))

@@ -935,15 +935,6 @@ class butterfly_laser_on_koheron_driver:
         # part 3
         part = part.fuse(_custom_cylinder(dia=3, dz=length, x=p3x, y=p3y, z=z_offset+height))
         part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p3x, y=p3y, z=z_offset-6+height))
-        # # part 1
-        # part = _custom_cylinder(dia=3, dz=length, x=p1x, y=p1y, z=z_offset+height)
-        # part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p1x, y=p1y, z=z_offset-6+height))
-        # # part 2
-        # part = part.fuse(_custom_cylinder(dia=3, dz=length, x=p2x, y=p2y, z=z_offset+height))
-        # part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p2x, y=p2y, z=z_offset-6+height))
-        # # part 3
-        # part = part.fuse(_custom_cylinder(dia=3, dz=length, x=p3x, y=p3y, z=z_offset+height))
-        # part = part.fuse(_custom_cylinder(dia=6.5, dz=length-6, x=p3x, y=p3y, z=z_offset-6+height))
 
         part.Placement = obj.Placement
         obj.DrillPart = part

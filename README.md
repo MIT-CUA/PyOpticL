@@ -1,8 +1,10 @@
+<img src="https://github.com/user-attachments/assets/d20bf57a-f602-48b8-b033-8d03141b6e97" width=300>
+
 ## PyOpticL - Code-to-CAD optical system engineering
 
-![image](https://github.com/user-attachments/assets/39065a36-9f22-4f2a-a70f-08684ac68f45)
+![image](https://github.com/user-attachments/assets/780dbadd-5971-4b00-a471-07538e7d65ba)
 
-#### Discord Server: https://discord.gg/y8aqDe8RxN
+#### Discord Server: https://discord.gg/vV4NP6rXmp
 
 <!-- Trapped Ion quantum computer at UMass Amherst engineered with PyOpticL: -->
 <!-- <img src="https://github.com/user-attachments/assets/1dbe2986-20e2-4f4e-9b4c-00dd31a4b656" width=50%> -->
@@ -14,6 +16,7 @@
 ### Wiki
 * [Quickstart Guide](https://github.com/UMassIonTrappers/PyOpticL/wiki#quickstart-guide)
 * [Model Import Guide](https://github.com/UMassIonTrappers/PyOpticL/wiki#model-import-guide)
+* [Contributing to PyOpticL](https://github.com/UMassIonTrappers/PyOpticL/wiki/Contributing-to-PyOpticL)
   
 ### Modular baseplate examples:
 * [Laser - Extended Cavity Diode Laser (with optical isolator)](https://github.com/UMassIonTrappers/PyOpticL/wiki/Module-‐-ECDL-with-Isolation-Baseplate)
@@ -138,10 +141,16 @@ subsystem_spam(x=32 , y=50, thumbscrews=True)
 
 ## PyOpticL Community Members:
 
- * MIT QUANTA LAB (Prof. Isaac Chuang founded the C4PO library which inspired thi project)
+ * MIT QUANTA LAB (Prof. Isaac Chuang created the initial C4PO library which inspired this project)
  * MIT Quantum Photonics & AI Group (Prof. Dirk Englund)
  * UCONN - Prof. Simone Colombo
- * UC Berkeley 
+ * Montana St. - Prof. Matt Jaffe
+ * UC Berkeley - Prof. Aziza Suleymanzade
+ * UW Madison - Prof. Josiah Sinclair
+ * NUS - Prof. Dzmitry Matsukevich
+ * Stanford - Prof. Jonathan Simon
  * Quera
+
+<img src="https://github.com/user-attachments/assets/ff290700-2e48-4404-ba55-5830340bf4d4" width=700>
 
 #### Again we thank the MIT QUANTA LAB for sharing their C4PO ('CAD for Precision Optics') based on OpenSCAD which inspired this library.

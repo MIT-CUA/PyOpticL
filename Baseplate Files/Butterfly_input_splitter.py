@@ -5,19 +5,19 @@ name = "Butterfly Splitter"
 date_time = datetime.now().strftime("%m/%d/%Y")
 label = name + " " +  date_time
 
-base_dx = 6*layout.inch #160
-base_dy = 218 #173
-base_dz = layout.inch
+base_dx = 8*layout.inch #160
+base_dy = 4*layout.inch #173
+base_dz = 0.95*layout.inch
 gap = 0
 
 x_offset = -9-25.4/2
 y_offset = 10-25.4/2
 
-# mount_holes_temp = [(1,3),(3,4),(4,0),(9,0),(9,4),(10,2),(12,3)]
+mount_holes_temp = [(1,3), (4,3), (5,0), (8,0)]
 
 mount_holes = []
-# for x,y in mount_holes_temp:
-#     mount_holes.append((x+x_offset/25.4,y+y_offset/25.4))
+for x,y in mount_holes_temp:
+    mount_holes.append((x+x_offset/25.4,y+y_offset/25.4))
 
 # Note that for mirror_mount_c05g, an offset of 6mm is needed as the pos is 
 # centered at the optical start, not the drill hole as in openscad. 
@@ -41,7 +41,7 @@ def butterfly_input_splitter(x=0, y=0, angle=0, mirror=optomech.mirror_mount_k05
     # Define Baseplate:
     baseplate = layout.baseplate(base_dx, base_dy, base_dz, x=x, y=y, angle=angle,
                                  gap=gap, mount_holes=mount_holes,
-                                 name=name, label=label)
+                                 name=name, label="")
 
     # Define beam path:
     beam = baseplate.add_beam_path(x=start_x, y=start_y, angle=layout.cardinal['right'], color = (0,0,255))
@@ -50,53 +50,54 @@ def butterfly_input_splitter(x=0, y=0, angle=0, mirror=optomech.mirror_mount_k05
     # Optic Placement Definitions:
     baseplate.place_element("butterfly_laser_input", optomech.butterfly_laser_on_koheron_driver, 
                             x=start_x, y=start_y, angle=layout.cardinal['right'])
-    
-    baseplate.place_element_along_beam("mirror1_in", optomech.circular_mirror, beam,
-                                       beam_index=0b1, distance=50, angle=135,
-                                       mount_type=optomech.mirror_mount_k05s2)
     baseplate.place_element_along_beam("isolator", optomech.isolator_895, beam, beam_index=0b1,
-                                       distance=30, angle=layout.cardinal['down'])
+                                       distance=20, angle=layout.cardinal['right'])
     baseplate.place_element_along_beam("pinhole1", optomech.circular_lens, beam, 
-                                       beam_index=0b1, distance=40, angle=90, mount_type=optomech.mirror_mount_c05g)
-    baseplate.place_element_along_beam("mirror2_in", optomech.circular_mirror, beam,
-                                       beam_index=0b1, distance=15, angle=225,
+                                       beam_index=0b1, distance=30, angle=0, mount_type=optomech.mirror_mount_c05g)
+    baseplate.place_element_along_beam("mirror1_in", optomech.circular_mirror, beam,
+                                       beam_index=0b1, distance=25, angle=135,
                                        mount_type=optomech.mirror_mount_k05s2)
     baseplate.place_element_along_beam("waveplate1_in", optomech.waveplate, beam, 
-                                       beam_index=0b1, distance=23, angle=0, 
+                                      beam_index=0b1, distance=20, angle=90,
                                        mount_type=optomech.rotation_stage_rsp05)
-    baseplate.place_element_along_beam("pbs", optomech.cube_splitter, beam,
-                                       beam_index=0b1, distance=20, angle=0, invert=True,
-                                       mount_type=optomech.skate_mount)
+    baseplate.place_element_along_beam("mirror2_in", optomech.circular_mirror, beam,
+                                       beam_index=0b1, distance=20, angle=315,
+                                        mount_type=optomech.mirror_mount_k05s2)
+    baseplate.place_element_along_beam("fiberport_out_1", optomech.fiberport_12mm, beam,
+                                       beam_index=0b1, distance=38, angle=180)  
+    #baseplate.place_element_along_beam("pbs", optomech.cube_splitter, beam,
+                                       #beam_index=0b1, distance=20, angle=0, invert=True,
+                                       #mount_type=optomech.skate_mount)
 
     # Transmitted pbs parts:
-    baseplate.place_element_along_beam("pinhole2", optomech.circular_lens, beam,
-                                       beam_index=0b10, distance=32, angle=180, mount_type=optomech.mirror_mount_c05g)
-    baseplate.place_element_along_beam("mirror1_out", optomech.circular_mirror, beam,
-                                       beam_index=0b10, distance=15, angle=45,
-                                       mount_type=optomech.mirror_mount_k05s2)
-    baseplate.place_element_along_beam("mirror2_out", optomech.circular_mirror, beam,
-                                       beam_index=0b10, distance=25, angle=225,
-                                       mount_type=optomech.mirror_mount_k05s2)
-    baseplate.place_element_along_beam("waveplate1_out", optomech.waveplate, beam, 
-                                       beam_index=0b10, distance=20, angle=0, 
-                                       mount_type=optomech.rotation_stage_rsp05)
-    baseplate.place_element_along_beam("fiberport_out_1", optomech.fiberport_mount_hca3, beam,
-                                       beam_index=0b10, distance=15, angle=0)
+   #baseplate.place_element_along_beam("pinhole2", optomech.circular_lens, beam,
+                                      #beam_index=0b10, distance=32, angle=180, mount_type=optomech.mirror_mount_c05g)
+   #baseplate.place_element_along_beam("mirror1_out", optomech.circular_mirror, beam,
+                                      #beam_index=0b10, distance=15, angle=45,
+                                      #mount_type=optomech.mirror_mount_k05s2)
+   #baseplate.place_element_along_beam("mirror2_out", optomech.circular_mirror, beam,
+                                      #beam_index=0b10, distance=25, angle=225,
+                                      #mount_type=optomech.mirror_mount_k05s2)
+   #baseplate.place_element_along_beam("waveplate1_out", optomech.waveplate, beam, 
+                                      #beam_index=0b10, distance=20, angle=0, 
+                                      #mount_type=optomech.rotation_stage_rsp05)
+   #baseplate.place_element_along_beam("fiberport_out_1", optomech.fiberport_mount_hca3, beam,
+                                      #beam_index=0b10, distance=15, angle=0)
 
     # Reflected pbs parts:
-    baseplate.place_element_along_beam("mirror3_out", optomech.circular_mirror, beam,
-                                       beam_index=0b11, distance=65, angle=-45,
-                                       mount_type=optomech.mirror_mount_k05s2)
-    baseplate.place_element_along_beam("pinhole3", optomech.circular_lens, beam,
-                                       beam_index=0b11, distance=28, angle=0, mount_type=optomech.mirror_mount_c05g)
-    baseplate.place_element_along_beam("mirror4_out", optomech.circular_mirror, beam,
-                                       beam_index=0b11, distance=20, angle=135,
-                                       mount_type=optomech.mirror_mount_k05s2)
-    baseplate.place_element_along_beam("waveplate1_out", optomech.waveplate, beam, 
-                                       beam_index=0b11, distance=18, angle=270, 
-                                       mount_type=optomech.rotation_stage_rsp05)
-    baseplate.place_element_along_beam("fiberport_out_1", optomech.fiberport_mount_hca3, beam,
-                                       beam_index=0b11, distance=10, angle=270)
+    #baseplate.place_element_along_beam("mirror3_out", optomech.circular_mirror, beam,
+                                       #beam_index=0b11, distance=65, angle=-45,
+                                       #mount_type=optomech.mirror_mount_k05s2)
+    #baseplate.place_element_along_beam("pinhole3", optomech.circular_lens, beam,
+                                       #beam_index=0b11, distance=28, angle=0, mount_type=optomech.mirror_mount_c05g)
+    #baseplate.place_element_along_beam("mirror4_out", optomech.circular_mirror, beam,
+                                       #beam_index=0b11, distance=20, angle=135,
+                                       #mount_type=optomech.mirror_mount_k05s2)
+    #baseplate.place_element_along_beam("waveplate1_out", optomech.waveplate, beam, 
+                                       #beam_index=0b11, distance=18, angle=270, 
+                                       #mount_type=optomech.rotation_stage_rsp05)
+    #baseplate.place_element_along_beam("fiberport_out_1", optomech.fiberport_mount_hca3, beam,
+                                       #beam_index=0b11, distance=10, angle=270)
 
 
 

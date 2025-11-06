@@ -33,7 +33,7 @@ def fb_input_splitter(x=0, y=0, angle=0, mirror=optomech.mirror_mount_m05, x_spl
 
     baseplate = layout.baseplate(base_dx, base_dy, base_dz, x=x, y=y, angle=angle,
                                  gap=gap, mount_holes=mount_holes,
-                                 name=name, label=label)
+                                 name=name, label="")
 
     beam = baseplate.add_beam_path(x=base_dx-60, y=start_y+10, angle=layout.cardinal['left'], color = (0,0,255))
 
@@ -93,7 +93,7 @@ def fb_input_splitter(x=0, y=0, angle=0, mirror=optomech.mirror_mount_m05, x_spl
     
     fb_rx, fb_ry = base_dx, 259.05
     baseplate.place_element("mod_mountL", optomech.modular1, x=fb_rx, 
-                            y=fb_ry, angle=0)
+                           y=fb_ry, angle=0)
     baseplate.place_element("fiber_out_reflected", optomech.fiberport_12mm, x=fb_rx-15,
                              y=fb_ry, angle=180, port=1)
 

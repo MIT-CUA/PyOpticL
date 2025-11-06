@@ -4,6 +4,7 @@ from math import *
 import numpy as np
 
 inch = 25.4
+max_beam_index = 1024
 
 def is_mult(x, factor, tol=1e-5):
     return isclose((abs(x)+tol/2)%factor, 0, abs_tol=tol)
@@ -27,7 +28,7 @@ def check_interaction(x1, y1, a1, ref_obj):
     if a_rel > pi/2:
         return
 
-    # limits on incomming beam
+    # limits on incoming beam
     max_angle = radians(ref_obj.Proxy.max_angle)
     max_width = ref_obj.Proxy.max_width
 
@@ -175,7 +176,7 @@ class beam_path:
 
     # compute full beam path given start point and angle
     def calculate_beam_path(self, selfobj, x1, y1, a1, beam_index=1):
-        if beam_index > 200:
+        if beam_index > max_beam_index:
             return
         
         count = 0 # number of interactions per beam
@@ -282,7 +283,8 @@ class beam_path:
                 # restrict beam to baseplate
                 if selfobj.Baseplate.dx != 0 and selfobj.Baseplate.dy != 0:
                     intersect = []
-                    xf, yf = x1+500*cos(a1), y1+500*sin(a1) # TODO find a better way than this
+                    max_len = sqrt(selfobj.Baseplate.dx.Value**2+selfobj.Baseplate.dy.Value**2)
+                    xf, yf = x1+max_len*cos(a1), y1+max_len*sin(a1)
                     x_max = selfobj.Baseplate.dx.Value
                     y_max = selfobj.Baseplate.dy.Value
                     if x_max < xf:
